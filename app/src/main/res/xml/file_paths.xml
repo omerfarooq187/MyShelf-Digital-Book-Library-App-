@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Grant access to files in your app-specific external storage -->
+    <external-path
+        name="pdfs"
+        path="." />
+</paths>
