@@ -21,7 +21,9 @@ object RoomModule {
             app,
             AppDatabase::class.java,
             "my_shelf.db"
-        ).build()
+        )
+            .fallbackToDestructiveMigration(true)
+            .build()
     }
 
     @Provides

@@ -5,15 +5,29 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.innovatewithomer.myshelf.data.local.entity.CachedBook
+import androidx.room.Transaction
+import com.innovatewithomer.myshelf.data.local.entity.BookEntity
 
 @Dao
 interface BookDao {
     @Query("SELECT * FROM books")
-    suspend fun getAllBooks(): List<CachedBook>
+    suspend fun getAllBooks(): List<BookEntity>
+
+    @Query("SELECT * FROM books WHERE isSynced = 0")
+    suspend fun getUnsyncedBooks(): List<BookEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertBooks(books: List<CachedBook>)
+    suspend fun insertBook(book: BookEntity)
+
+    @Transaction
+    @Query("UPDATE books SET fileUrl = :fileUrl, isSynced = :isSynced WHERE id = :bookId")
+    suspend fun updateBookSyncStatus(bookId: String, fileUrl: String, isSynced: Boolean)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertBooks(book: List<BookEntity>)
+
+    @Delete
+    suspend fun deleteBook(bookEntity: BookEntity)
 
     @Query("DELETE FROM books")
     suspend fun clearBooks()

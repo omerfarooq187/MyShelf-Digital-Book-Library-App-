@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "814583269557",
+    "firebase_url": "https://chatify-dec73-default-rtdb.firebaseio.com",
+    "project_id": "chatify-dec73",
+    "storage_bucket": "chatify-dec73.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:814583269557:android:8c1159f4b3721b362b16fc",
+        "android_client_info": {
+          "package_name": "com.innovatewithomer.myshelf"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "814583269557-68rhra8dej0k2qg2e8epnq0d65ijjbus.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.innovatewithomer.myshelf",
+            "certificate_hash": "fcb6fd560ba2e29672c4c16eec664ce9249142d8"
+          }
+        },
+        {
+          "client_id": "814583269557-nd47stec11pguspjvrsue752bis4b2hf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAsOjKW87xG79_Yvdh4b6waUbD2YOnF1SE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "814583269557-nd47stec11pguspjvrsue752bis4b2hf.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -56,6 +56,7 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.play.services.auth)
     implementation(libs.googleid)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
@@ -86,5 +87,18 @@ dependencies {
     //Hilt ViewModel navigation
     implementation(libs.androidx.hilt.navigation.compose)
 
+    // Kotlin serialization
     implementation(libs.kotlinx.serialization.json)
+
+    // Work Manager
+    implementation(libs.androidx.work.runtime.ktx)
+
+    // Hilt dependency for work manager
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
+
+    // firebase additional dependencies
+    implementation(libs.firebase.appcheck.playintegrity)
+    implementation(libs.firebase.appcheck.ktx)
+    implementation(libs.firebase.appcheck.debug)
 }

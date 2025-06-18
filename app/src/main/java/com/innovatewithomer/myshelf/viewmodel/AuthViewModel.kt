@@ -21,11 +21,11 @@ class AuthViewModel @Inject constructor(
         if (user != null) {
             _userState.value = AuthState.Authenticated(user.uid)
         } else {
-            signInAnonymously()
+            _userState.value = AuthState.UnAuthenticated
         }
     }
 
-    private fun signInAnonymously() {
+    fun signInAnonymously() {
         viewModelScope.launch {
             _userState.value = AuthState.Loading
             val result = authRepository.signInAnonymously()
@@ -36,11 +36,23 @@ class AuthViewModel @Inject constructor(
             }
         }
     }
+
+    fun signInWithGoogle(idToken:String) {
+        viewModelScope.launch {
+            _userState.value = AuthState.Loading
+            val result = authRepository.signInWithGoogle(idToken)
+            if (result.isSuccess) {
+                _userState.value = AuthState.Authenticated(result.getOrThrow().uid)
+            } else {
+                _userState.value = AuthState.Error(result.exceptionOrNull()?.message ?: "Google Sign-in failed")
+            }
+        }
+    }
 }
 
 sealed class AuthState {
     data object Loading: AuthState()
     data class Authenticated(val userId: String): AuthState()
     data class Error(val message: String): AuthState()
-    data object unAuthenticated: AuthState()
+    data object UnAuthenticated: AuthState()
 }

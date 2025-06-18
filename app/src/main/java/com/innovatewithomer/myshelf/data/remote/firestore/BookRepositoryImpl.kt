@@ -36,4 +36,20 @@ class BookRepositoryImpl @Inject constructor(private val firestore: FirebaseFire
             Result.failure(e)
         }
     }
+
+    override suspend fun deleteBook(userId: String, bookId: String): Result<Unit> {
+        return try {
+            firestore.collection("users")
+                .document(userId)
+                .collection("books")
+                .document(bookId)
+                .delete()
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
 }

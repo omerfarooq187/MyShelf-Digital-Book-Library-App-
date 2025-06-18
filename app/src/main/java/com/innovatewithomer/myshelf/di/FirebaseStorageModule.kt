@@ -1,5 +1,6 @@
 package com.innovatewithomer.myshelf.di
 
+import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.storage.FirebaseStorage
 import dagger.Module
 import dagger.Provides
@@ -14,4 +15,14 @@ object FirebaseStorageModule {
     @Provides
     @Singleton
     fun firebaseStorage(): FirebaseStorage = FirebaseStorage.getInstance()
+//
+//    @Provides
+//    fun providesStorageRepository() : StorageRepository {
+//        return StorageRepositoryImpl(firebaseStorage())
+//    }
+
+    @Provides
+    fun providesFirebaseAppCheck(): FirebaseAppCheck {
+        return FirebaseAppCheck.getInstance()
+    }
 }

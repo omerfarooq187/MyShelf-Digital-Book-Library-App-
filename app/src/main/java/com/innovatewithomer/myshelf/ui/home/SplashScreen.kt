@@ -25,6 +25,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.innovatewithomer.myshelf.R
 import com.innovatewithomer.myshelf.utils.HomeScreenRoute
+import com.innovatewithomer.myshelf.utils.LoginScreenRoute
 import com.innovatewithomer.myshelf.viewmodel.AuthState
 import com.innovatewithomer.myshelf.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
@@ -35,26 +36,27 @@ fun SplashScreen(authViewModel: AuthViewModel = hiltViewModel(), navController: 
     val context = LocalContext.current
     when(state) {
         is AuthState.Loading -> {
-            CircularProgressIndicator()
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
         }
         is AuthState.Authenticated -> {
-            LaunchedEffect(state) {
-                Toast.makeText(context, "Authenticated for backup", Toast.LENGTH_SHORT).show()
+            navController.navigate(HomeScreenRoute) {
+                popUpTo(0) {inclusive = true}
             }
         }
         is AuthState.Error -> {
             Toast.makeText(context, "Authentication error for backup", Toast.LENGTH_SHORT).show()
         }
-        is AuthState.unAuthenticated -> {
-            Toast.makeText(context, "Not Authenticated for backup", Toast.LENGTH_SHORT).show()
+        is AuthState.UnAuthenticated -> {
+           navController.navigate(LoginScreenRoute) {
+               popUpTo(0) { inclusive = true }
+           }
         }
     }
 
     LaunchedEffect(Unit) {
         delay(3500)
-        navController.navigate(HomeScreenRoute) {
-            popUpTo(0)
-        }
     }
 
     Box(

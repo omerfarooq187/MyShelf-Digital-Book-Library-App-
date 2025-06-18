@@ -11,15 +11,18 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,8 +31,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SwipeToDismissBoxState
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -43,18 +49,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
-import com.innovatewithomer.myshelf.data.local.entity.CachedBook
+import com.innovatewithomer.myshelf.data.local.entity.BookEntity
 import com.innovatewithomer.myshelf.viewmodel.BookViewModel
 import com.innovatewithomer.myshelf.viewmodel.UploadState
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.io.File
+import androidx.core.net.toUri
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,19 +85,20 @@ fun HomeScreen() {
             Intent.FLAG_GRANT_READ_URI_PERMISSION
         )
         uri.let {
-            bookViewModel.uploadBook(userId, uri)
+            bookViewModel.addBook(userId, uri)
         }
     }
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("📚 MyShelf") }
+                title = { Text("My Shelf") }
             )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
                 launcher.launch(arrayOf("application/pdf"))
             }) {
+
                 Icon(Icons.Default.Add, contentDescription = "Add Book")
             }
         }
@@ -137,14 +144,13 @@ fun HomeScreen() {
             // Upload state overlay
             when (uploadState) {
                 UploadState.Uploading -> {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.3f))
-                    ) {
-                        CircularProgressIndicator()
-                    }
+//                    Box(
+//                        contentAlignment = Alignment.Center,
+//                        modifier = Modifier
+//                            .fillMaxSize()
+//                    ) {
+//                        CircularProgressIndicator()
+//                    }
                 }
 
                 is UploadState.Failure -> {
@@ -164,8 +170,7 @@ fun HomeScreen() {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.3f))
-                        .blur(16.dp),
+                        .background(Color.Black.copy(alpha = 0.150f)),
                     contentAlignment = Alignment.Center
                 ) {
                     ShowPdfLoading()
@@ -177,9 +182,10 @@ fun HomeScreen() {
 
 @Composable
 fun BookItem(
-    book: CachedBook,
+    book: BookEntity,
     isPdfLoading: Boolean,
-    onLoadingChange: (Boolean) -> Unit
+    onLoadingChange: (Boolean) -> Unit,
+//    onDelete: (BookEntity)-> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -188,21 +194,28 @@ fun BookItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
-            .clickable(enabled = !isPdfLoading) { // disable click while loading
+            .clickable(enabled = !isPdfLoading) {
                 scope.launch {
+                    onLoadingChange(true)
                     try {
-                        onLoadingChange(true)
-                        val fileName = "${book.title}.pdf"
-                        val cachedFile = downloadAndCachePdf(context, book.fileUrl, fileName)
-                        if (cachedFile != null) {
-                            openPdf(context, cachedFile)
+                        if (book.isSynced) {
+                            val fileName = "${book.title}.pdf"
+                            val cachedFile = downloadAndCachePdf(context, book.fileUrl, fileName)
+                            if (cachedFile != null) {
+                                openPdf(context, cachedFile)
+                            } else {
+                                Toast.makeText(context, "Error opening Firebase PDF", Toast.LENGTH_SHORT).show()
+                            }
                         } else {
-                            Toast.makeText(context, "Error opening Pdf", Toast.LENGTH_SHORT).show()
+                            val localFile = File(book.fileUrl)
+                            if (localFile.exists()) {
+                                openPdf(context, localFile)
+                            } else {
+                                Toast.makeText(context, "Local file not found", Toast.LENGTH_SHORT).show()
+                            }
                         }
-                    } catch (e: Exception) {
-                        Toast.makeText(context, "Error opening Pdf", Toast.LENGTH_SHORT).show()
                     } finally {
-                        onLoadingChange(false) // hide loading UI in any case
+                        onLoadingChange(false)
                     }
                 }
             },
@@ -212,6 +225,11 @@ fun BookItem(
             Text(text = book.title, style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(4.dp))
             Text(text = book.author, style = MaterialTheme.typography.bodyMedium)
+            Spacer(modifier = Modifier.height(4.dp))
+            Row {
+                Text(text = book.author, style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.width(2.dp))
+            }
         }
     }
 }
@@ -241,7 +259,7 @@ fun ShowPdfLoading(modifier: Modifier = Modifier) {
 }
 
 
-suspend fun downloadAndCachePdf(context: Context, fileUrl: String, fileName: String) :File?{
+suspend fun downloadAndCachePdf(context: Context, fileUrl: String, fileName: String): File? {
     return try {
         val storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(fileUrl)
         val localFile = File(context.getExternalFilesDir("pdfs"), fileName)
@@ -257,6 +275,8 @@ suspend fun downloadAndCachePdf(context: Context, fileUrl: String, fileName: Str
 
 
 
+
+
 fun openPdf(context: Context, file: File) {
     val uri = FileProvider.getUriForFile(
         context,
@@ -269,5 +289,15 @@ fun openPdf(context: Context, file: File) {
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     val chooser = Intent.createChooser(intent, "Open Pdf With...")
+    context.startActivity(chooser)
+}
+
+fun openPdf(context: Context, uri: Uri) {
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(uri, "application/pdf")
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+
+    val chooser = Intent.createChooser(intent, "Open PDF With...")
     context.startActivity(chooser)
 }

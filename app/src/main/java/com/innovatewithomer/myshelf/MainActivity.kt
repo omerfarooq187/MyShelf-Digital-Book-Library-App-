@@ -10,8 +10,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.innovatewithomer.myshelf.ui.home.HomeScreen
 import com.innovatewithomer.myshelf.ui.home.SplashScreen
+import com.innovatewithomer.myshelf.ui.login.SignInScreen
 import com.innovatewithomer.myshelf.ui.theme.MyShelfTheme
 import com.innovatewithomer.myshelf.utils.HomeScreenRoute
+import com.innovatewithomer.myshelf.utils.LoginScreenRoute
 import com.innovatewithomer.myshelf.utils.SplashScreenRoute
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -34,6 +36,13 @@ fun App() {
     NavHost(navController = navController, startDestination = SplashScreenRoute) {
         composable<SplashScreenRoute> {
             SplashScreen(navController = navController)
+        }
+        composable<LoginScreenRoute> {
+            SignInScreen {
+                navController.navigate(HomeScreenRoute) {
+                    popUpTo(LoginScreenRoute) { inclusive = true }
+                }
+            }
         }
         composable<HomeScreenRoute> {
             HomeScreen()
