@@ -1,5 +1,6 @@
 package com.innovatewithomer.myshelf.data.remote.firestore
 
+import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
 import com.innovatewithomer.myshelf.data.model.SavedBook
 import kotlinx.coroutines.tasks.await
@@ -39,17 +40,21 @@ class BookRepositoryImpl @Inject constructor(private val firestore: FirebaseFire
 
     override suspend fun deleteBook(userId: String, bookId: String): Result<Unit> {
         return try {
+            // Add logging to verify deletion
+            Log.d("BookRepository", "Deleting book: $bookId for user: $userId")
+
             firestore.collection("users")
                 .document(userId)
                 .collection("books")
                 .document(bookId)
                 .delete()
                 .await()
+
+            Log.d("BookRepository", "Successfully deleted book: $bookId")
             Result.success(Unit)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("BookRepository", "Error deleting book: $bookId", e)
             Result.failure(e)
         }
     }
-
 }

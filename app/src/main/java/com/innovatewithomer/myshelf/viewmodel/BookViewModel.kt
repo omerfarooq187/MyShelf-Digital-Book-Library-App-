@@ -24,6 +24,7 @@ import com.innovatewithomer.myshelf.data.repo.BookCacheRepository
 import com.innovatewithomer.myshelf.worker.BookSyncWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -159,18 +160,39 @@ class BookViewModel @Inject constructor(
 
     fun deleteBook(userId: String, bookEntity: BookEntity) {
         viewModelScope.launch {
-            // 1. Delete from Firestore if synced
-            if (bookEntity.isSynced) {
-                val firestoreResult = bookRepository.deleteBook(userId, bookEntity.id)
-                if (firestoreResult.isFailure) {
-                    Log.e("BookViewModel", "Failed to delete from Firestore", firestoreResult.exceptionOrNull())
+            // First get a reference to the book ID before deletion
+            val bookId = bookEntity.id
+            val isSynced = bookEntity.isSynced
+
+            // 1. First delete from local cache
+            bookCacheRepository.deleteBook(bookEntity)
+
+            // 2. Delete local file
+            val file = File(bookEntity.fileUrl)
+            if (file.exists()) {
+                file.delete()
+            }
+
+            // 3. Delete from Firestore if synced (do this AFTER local deletion)
+            if (isSynced) {
+                try {
+                    // Add a small delay to ensure local deletion completes
+//                    delay(3000)
+
+                    val firestoreResult = bookRepository.deleteBook(userId, bookId)
+                    if (firestoreResult.isFailure) {
+                        Log.e("BookViewModel", "Failed to delete from Firestore", firestoreResult.exceptionOrNull())
+                        // Reinsert if Firestore deletion fails
+                        bookCacheRepository.insertBook(bookEntity)
+                    }
+                } catch (e: Exception) {
+                    Log.e("BookViewModel", "Exception deleting from Firestore", e)
+                    // Reinsert if Firestore deletion fails
+                    bookCacheRepository.insertBook(bookEntity)
                 }
             }
 
-            // 2. Delete from local cache
-            bookCacheRepository.deleteBook(bookEntity)
-
-            // 3. Refresh book list
+            // 4. Refresh local book list
             loadCachedBooks()
         }
     }
@@ -202,38 +224,6 @@ class BookViewModel @Inject constructor(
 
         WorkManager.getInstance(context).enqueue(workRequest)
     }
-
-//    fun testWorkerExecution() {
-//        // Create a test book
-//        val testBook = BookEntity(
-//            id = "test_worker_book",
-//            title = "Worker Test Book",
-//            author = "Test Author",
-//            fileUrl = context.getExternalFilesDir("pdfs")?.path + "/test.pdf",
-//            isSynced = false
-//        )
-//
-//        viewModelScope.launch {
-//            // Save test book
-//            bookCacheRepository.insertBook(testBook)
-//
-//            // Create test PDF file
-//            File(testBook.fileUrl).writeText("Test PDF Content")
-//
-//            // Schedule worker
-//            val constraints = Constraints.Builder()
-//                .setRequiredNetworkType(NetworkType.CONNECTED)
-//                .build()
-//
-//            val workRequest = OneTimeWorkRequestBuilder<BookSyncWorker>()
-//                .setConstraints(constraints)
-//                .addTag("test_sync")
-//                .build()
-//
-//            WorkManager.getInstance(context).enqueue(workRequest)
-//            Toast.makeText(context, "Worker scheduled", Toast.LENGTH_SHORT).show()
-//        }
-//    }
 }
 
 sealed class UploadState {

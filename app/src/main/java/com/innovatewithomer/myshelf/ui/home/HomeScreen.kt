@@ -22,7 +22,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,11 +31,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SwipeToDismissBoxState
-import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -46,11 +47,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
@@ -60,7 +61,6 @@ import com.innovatewithomer.myshelf.viewmodel.UploadState
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.io.File
-import androidx.core.net.toUri
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,7 +73,12 @@ fun HomeScreen() {
     var isPdfOpening by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
-    LaunchedEffect(books) {
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    var deletedBook by remember { mutableStateOf<BookEntity?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
         bookViewModel.getBooks(userId)
     }
     val launcher = rememberLauncherForActivityResult(
@@ -93,6 +98,9 @@ fun HomeScreen() {
             TopAppBar(
                 title = { Text("My Shelf") }
             )
+        },
+        snackbarHost = {
+            SnackbarHost(snackbarHostState)
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
@@ -117,7 +125,23 @@ fun HomeScreen() {
                             BookItem(
                                 book = book,
                                 isPdfLoading = isPdfOpening,
-                                onLoadingChange = { isPdfOpening = it }
+                                onLoadingChange = { isPdfOpening = it },
+                                onDelete = {
+                                    deletedBook = it
+                                    bookViewModel.deleteBook(userId,it)
+
+                                    coroutineScope.launch {
+                                        val result = snackbarHostState.showSnackbar(
+                                            message = "Book deleted",
+                                            actionLabel = "Undo",
+                                            duration = SnackbarDuration.Short
+                                        )
+                                        if (result == SnackbarResult.ActionPerformed) {
+                                            deletedBook?.let { bookViewModel.addBook(userId, it.fileUrl.toUri()) }
+                                        }
+                                        deletedBook = null
+                                    }
+                                }
                             )
                         }
                     }
@@ -185,7 +209,7 @@ fun BookItem(
     book: BookEntity,
     isPdfLoading: Boolean,
     onLoadingChange: (Boolean) -> Unit,
-//    onDelete: (BookEntity)-> Unit
+    onDelete: (BookEntity) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -194,42 +218,61 @@ fun BookItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
-            .clickable(enabled = !isPdfLoading) {
-                scope.launch {
-                    onLoadingChange(true)
-                    try {
-                        if (book.isSynced) {
-                            val fileName = "${book.title}.pdf"
-                            val cachedFile = downloadAndCachePdf(context, book.fileUrl, fileName)
-                            if (cachedFile != null) {
-                                openPdf(context, cachedFile)
-                            } else {
-                                Toast.makeText(context, "Error opening Firebase PDF", Toast.LENGTH_SHORT).show()
-                            }
-                        } else {
-                            val localFile = File(book.fileUrl)
-                            if (localFile.exists()) {
-                                openPdf(context, localFile)
-                            } else {
-                                Toast.makeText(context, "Local file not found", Toast.LENGTH_SHORT).show()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Book details column (clickable)
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(enabled = !isPdfLoading) {
+                        scope.launch {
+                            onLoadingChange(true)
+                            try {
+                                if (book.isSynced) {
+                                    val fileName = "${book.title}.pdf"
+                                    val cachedFile = downloadAndCachePdf(context, book.fileUrl, fileName)
+                                    if (cachedFile != null) {
+                                        openPdf(context, cachedFile)
+                                    } else {
+                                        Toast.makeText(context, "Error opening Firebase PDF", Toast.LENGTH_SHORT).show()
+                                    }
+                                } else {
+                                    val localFile = File(book.fileUrl)
+                                    if (localFile.exists()) {
+                                        openPdf(context, localFile)
+                                    } else {
+                                        Toast.makeText(context, "Local file not found", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            } finally {
+                                onLoadingChange(false)
                             }
                         }
-                    } finally {
-                        onLoadingChange(false)
                     }
-                }
-            },
-        shape = MaterialTheme.shapes.medium
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = book.title, style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = book.author, style = MaterialTheme.typography.bodyMedium)
-            Spacer(modifier = Modifier.height(4.dp))
-            Row {
+            ) {
+                Text(text = book.title, style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(text = book.author, style = MaterialTheme.typography.bodyMedium)
-                Spacer(modifier = Modifier.width(2.dp))
+                Spacer(modifier = Modifier.height(4.dp))
+                Row {
+                    Text(text = book.author, style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.width(2.dp))
+                }
             }
+
+            // Delete icon
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = "Delete book",
+                modifier = Modifier
+                    .clickable { onDelete(book) }
+                    .padding(8.dp)
+            )
         }
     }
 }
