@@ -172,6 +172,7 @@ class BookViewModel @Inject constructor(
             if (file.exists()) {
                 file.delete()
             }
+            loadCachedBooks()
 
             // 3. Delete from Firestore if synced (do this AFTER local deletion)
             if (isSynced) {
@@ -196,6 +197,16 @@ class BookViewModel @Inject constructor(
             loadCachedBooks()
         }
     }
+
+
+    fun reAddBook(book: BookEntity) {
+        viewModelScope.launch {
+            bookCacheRepository.insertBook(book.copy(isSynced = false))
+            loadCachedBooks()
+            scheduleBackgroundSync()
+        }
+    }
+
 
 
     private fun getFileNameFromUri(context: Context, uri: Uri): String? {

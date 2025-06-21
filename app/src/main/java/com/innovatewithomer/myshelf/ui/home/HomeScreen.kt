@@ -137,7 +137,7 @@ fun HomeScreen() {
                                             duration = SnackbarDuration.Short
                                         )
                                         if (result == SnackbarResult.ActionPerformed) {
-                                            deletedBook?.let { bookViewModel.addBook(userId, it.fileUrl.toUri()) }
+                                            deletedBook?.let { bookViewModel.reAddBook(it) }
                                         }
                                         deletedBook = null
                                     }
