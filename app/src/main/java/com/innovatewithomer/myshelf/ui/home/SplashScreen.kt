@@ -53,6 +53,12 @@ fun SplashScreen(authViewModel: AuthViewModel = hiltViewModel(), navController: 
                popUpTo(0) { inclusive = true }
            }
         }
+
+        AuthState.Anonymous -> {
+            navController.navigate(HomeScreenRoute) {
+                popUpTo(0) {inclusive = true}
+            }
+        }
     }
 
     LaunchedEffect(Unit) {

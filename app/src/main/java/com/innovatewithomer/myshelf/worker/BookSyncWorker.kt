@@ -33,7 +33,6 @@ class BookSyncWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         return try {
 
-//            firebaseCheck.limitedUseToken.await()
             val userId = authRepository.currentUser?.uid ?: return Result.failure()
             val unsyncedBooks = bookCacheRepository.getUnsyncedBooks()
 

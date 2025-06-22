@@ -108,6 +108,10 @@ fun SignInScreen(
                 isLoading = false
                 onSignedIn()
             }
+            is AuthState.Anonymous -> {
+                isLoading = false
+                onSignedIn()
+            }
             is AuthState.Error -> {
                 isLoading = false
                 errorMessage = (state as AuthState.Error).message
@@ -180,7 +184,7 @@ fun SignInScreen(
                     onClick = {
                         isLoading = true
                         scope.launch {
-                            authViewModel.signInAnonymously()
+                            authViewModel.useOfflineMode()
                         }
                     },
                     modifier = Modifier.fillMaxWidth()

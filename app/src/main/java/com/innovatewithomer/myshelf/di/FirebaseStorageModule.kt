@@ -15,11 +15,6 @@ object FirebaseStorageModule {
     @Provides
     @Singleton
     fun firebaseStorage(): FirebaseStorage = FirebaseStorage.getInstance()
-//
-//    @Provides
-//    fun providesStorageRepository() : StorageRepository {
-//        return StorageRepositoryImpl(firebaseStorage())
-//    }
 
     @Provides
     fun providesFirebaseAppCheck(): FirebaseAppCheck {

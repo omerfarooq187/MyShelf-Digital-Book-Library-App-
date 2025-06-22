@@ -1,11 +1,9 @@
+// HomeScreen.kt - Renamed to HomeScreenContent.kt
 package com.innovatewithomer.myshelf.ui.home
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,26 +15,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -51,9 +43,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import androidx.core.net.toUri
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
 import com.innovatewithomer.myshelf.data.local.entity.BookEntity
 import com.innovatewithomer.myshelf.viewmodel.BookViewModel
@@ -62,11 +51,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.io.File
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen() {
-    val bookViewModel: BookViewModel = hiltViewModel()
-    val userId = FirebaseAuth.getInstance().currentUser?.uid?:return
+fun HomeScreenContent(
+    modifier: Modifier = Modifier,
+    bookViewModel: BookViewModel,
+    userId: String
+) {
     val books by bookViewModel.books.collectAsState()
     val isLoading by bookViewModel.isLoading.collectAsState()
     val uploadState by bookViewModel.uploadState.collectAsState()
@@ -74,131 +64,99 @@ fun HomeScreen() {
     val context = LocalContext.current
 
     val snackbarHostState = remember { SnackbarHostState() }
-
     var deletedBook by remember { mutableStateOf<BookEntity?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         bookViewModel.getBooks(userId)
     }
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) {uri: Uri? ->
 
-        context.contentResolver.takePersistableUriPermission(
-            uri?: return@rememberLauncherForActivityResult,
-            Intent.FLAG_GRANT_READ_URI_PERMISSION
-        )
-        uri.let {
-            bookViewModel.addBook(userId, uri)
-        }
-    }
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("My Shelf") }
-            )
-        },
-        snackbarHost = {
-            SnackbarHost(snackbarHostState)
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = {
-                launcher.launch(arrayOf("application/pdf"))
-            }) {
+    Box(modifier = modifier.fillMaxSize()) {
+        // Main content
+        books?.let {
+            if (it.isNotEmpty()) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                ) {
+                    items(it) { book ->
+                        BookItem(
+                            book = book,
+                            isPdfLoading = isPdfOpening,
+                            onLoadingChange = { isPdfOpening = it },
+                            onDelete = {
+                                deletedBook = it
+                                bookViewModel.removeLocally(it)
 
-                Icon(Icons.Default.Add, contentDescription = "Add Book")
-            }
-        }
-    ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            // Main content
-            books?.let {
-                if (it.isNotEmpty()) {
-                    LazyColumn(
-                        contentPadding = paddingValues,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
-                    ) {
-                        items(it) { book ->
-                            BookItem(
-                                book = book,
-                                isPdfLoading = isPdfOpening,
-                                onLoadingChange = { isPdfOpening = it },
-                                onDelete = {
-                                    deletedBook = it
-                                    bookViewModel.deleteBook(userId,it)
-
-                                    coroutineScope.launch {
-                                        val result = snackbarHostState.showSnackbar(
-                                            message = "Book deleted",
-                                            actionLabel = "Undo",
-                                            duration = SnackbarDuration.Short
-                                        )
-                                        if (result == SnackbarResult.ActionPerformed) {
-                                            deletedBook?.let { bookViewModel.reAddBook(it) }
-                                        }
-                                        deletedBook = null
+                                coroutineScope.launch {
+                                    val result = snackbarHostState.showSnackbar(
+                                        message = "Book deleted",
+                                        actionLabel = "Undo",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                    if (result == SnackbarResult.ActionPerformed) {
+                                        deletedBook?.let { bookViewModel.reAddBook(it) }
+                                    } else {
+                                        bookViewModel.deleteBook(userId, it)
                                     }
+                                    deletedBook = null
                                 }
-                            )
-                        }
-                    }
-                } else if (isLoading) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                } else {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        Text(
-                            text = "No Books found",
-                            style = MaterialTheme.typography.bodyMedium
+                            }
                         )
                     }
                 }
-            }
-
-            // Upload state overlay
-            when (uploadState) {
-                UploadState.Uploading -> {
-//                    Box(
-//                        contentAlignment = Alignment.Center,
-//                        modifier = Modifier
-//                            .fillMaxSize()
-//                    ) {
-//                        CircularProgressIndicator()
-//                    }
-                }
-
-                is UploadState.Failure -> {
-                    Toast.makeText(context, "Upload Failed", Toast.LENGTH_SHORT).show()
-                }
-
-                is UploadState.Success -> {
-                    Toast.makeText(context, "Upload Successful", Toast.LENGTH_SHORT).show()
-                    bookViewModel.clearUploadState()
-                }
-
-                UploadState.Idle -> {}
-            }
-
-            // PDF loading overlay (always on top)
-            if (isPdfOpening) {
+            } else if (isLoading) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.150f)),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    ShowPdfLoading()
+                    CircularProgressIndicator()
                 }
+            } else {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Text(
+                        text = "No Books found",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+
+        // Snackbar host
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 64.dp) // Height of tab bar
+        ) {
+            SnackbarHost(hostState = snackbarHostState)
+        }
+
+        // Upload state overlay
+        when (uploadState) {
+            UploadState.Uploading -> {}
+            is UploadState.Failure -> {
+                Toast.makeText(context, "Upload Failed", Toast.LENGTH_SHORT).show()
+            }
+            is UploadState.Success -> {
+                Toast.makeText(context, "Upload Successful", Toast.LENGTH_SHORT).show()
+                bookViewModel.clearUploadState()
+            }
+            UploadState.Idle -> {}
+        }
+
+        // PDF loading overlay (always on top)
+        if (isPdfOpening) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.150f)),
+                contentAlignment = Alignment.Center
+            ) {
+                ShowPdfLoading()
             }
         }
     }
@@ -258,11 +216,6 @@ fun BookItem(
                 Text(text = book.title, style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(text = book.author, style = MaterialTheme.typography.bodyMedium)
-                Spacer(modifier = Modifier.height(4.dp))
-                Row {
-                    Text(text = book.author, style = MaterialTheme.typography.bodyMedium)
-                    Spacer(modifier = Modifier.width(2.dp))
-                }
             }
 
             // Delete icon
@@ -277,14 +230,12 @@ fun BookItem(
     }
 }
 
-
 @Composable
 fun ShowPdfLoading(modifier: Modifier = Modifier) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
-        modifier = modifier
-            .padding(32.dp)
+        modifier = modifier.padding(32.dp)
     ) {
         Text(
             text = "Opening book PDF...",
@@ -301,7 +252,6 @@ fun ShowPdfLoading(modifier: Modifier = Modifier) {
     }
 }
 
-
 suspend fun downloadAndCachePdf(context: Context, fileUrl: String, fileName: String): File? {
     return try {
         val storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(fileUrl)
@@ -316,10 +266,6 @@ suspend fun downloadAndCachePdf(context: Context, fileUrl: String, fileName: Str
     }
 }
 
-
-
-
-
 fun openPdf(context: Context, file: File) {
     val uri = FileProvider.getUriForFile(
         context,
@@ -328,19 +274,9 @@ fun openPdf(context: Context, file: File) {
     )
 
     val intent = Intent(Intent.ACTION_VIEW).apply {
-        setDataAndType(uri,"application/pdf")
-        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }
-    val chooser = Intent.createChooser(intent, "Open Pdf With...")
-    context.startActivity(chooser)
-}
-
-fun openPdf(context: Context, uri: Uri) {
-    val intent = Intent(Intent.ACTION_VIEW).apply {
         setDataAndType(uri, "application/pdf")
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-
-    val chooser = Intent.createChooser(intent, "Open PDF With...")
+    val chooser = Intent.createChooser(intent, "Open Pdf With...")
     context.startActivity(chooser)
 }

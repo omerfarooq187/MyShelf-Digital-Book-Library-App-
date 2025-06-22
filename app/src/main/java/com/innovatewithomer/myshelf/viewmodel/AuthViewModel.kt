@@ -2,6 +2,7 @@ package com.innovatewithomer.myshelf.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.innovatewithomer.myshelf.data.local.UserPreferences
 import com.innovatewithomer.myshelf.data.remote.auth.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,7 +12,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val preferences: UserPreferences
 ): ViewModel() {
     private val _userState = MutableStateFlow<AuthState>(AuthState.Loading)
     val userState = _userState.asStateFlow()
@@ -48,11 +50,39 @@ class AuthViewModel @Inject constructor(
             }
         }
     }
+
+    fun useOfflineMode() {
+        viewModelScope.launch {
+            preferences.setOfflineMode(true)
+            _userState.value = AuthState.Anonymous
+        }
+    }
+
+    fun clearOfflineMode() {
+        viewModelScope.launch {
+            preferences.setOfflineMode(false)
+        }
+    }
+
+    fun checkInitialState() {
+        viewModelScope.launch {
+            preferences.isOfflineMode.collect { isOffline ->
+                val user = authRepository.currentUser
+                _userState.value = when {
+                    isOffline -> AuthState.Anonymous
+                    user != null -> AuthState.Authenticated(user.uid)
+                    else -> AuthState.UnAuthenticated
+                }
+            }
+        }
+    }
+
 }
 
 sealed class AuthState {
     data object Loading: AuthState()
     data class Authenticated(val userId: String): AuthState()
     data class Error(val message: String): AuthState()
+    data object Anonymous: AuthState()
     data object UnAuthenticated: AuthState()
 }

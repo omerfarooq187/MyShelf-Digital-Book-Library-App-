@@ -76,6 +76,9 @@ dependencies {
 // Coil for image loading (optional if needed for thumbnails)
     implementation(libs.coil.compose)
 
+    //Material extended icons
+    implementation(libs.androidx.material.icons.extended.android)
+
     // Dagger hilt for dependency injection
     implementation(libs.dagger.hilt)
     ksp(libs.dagger.hilt.compiler)
@@ -101,4 +104,8 @@ dependencies {
     implementation(libs.firebase.appcheck.playintegrity)
     implementation(libs.firebase.appcheck.ktx)
     implementation(libs.firebase.appcheck.debug)
+
+
+    //Datastore preferences
+    implementation(libs.androidx.datastore.preferences)
 }
