@@ -1,21 +1,109 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# ----------------------------------------
+# Firebase
+# ----------------------------------------
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+-keep class com.google.firebase.** { *; }
+-dontwarn com.google.firebase.**
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Firebase Auth
+-keep class com.google.firebase.auth.** { *; }
+-dontwarn com.google.firebase.auth.**
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Firebase Firestore
+-keep class com.google.firebase.firestore.** { *; }
+-dontwarn com.google.firebase.firestore.**
+
+# Firebase Storage
+-keep class com.google.firebase.storage.** { *; }
+-dontwarn com.google.firebase.storage.**
+
+# Firebase AppCheck
+-keep class com.google.firebase.appcheck.** { *; }
+-dontwarn com.google.firebase.appcheck.**
+
+# Google Tasks (required by Firebase)
+-keep class com.google.android.gms.tasks.** { *; }
+-dontwarn com.google.android.gms.tasks.**
+
+# ----------------------------------------
+# Google Sign-In & Identity
+# ----------------------------------------
+
+-keep class com.google.android.gms.auth.api.** { *; }
+-dontwarn com.google.android.gms.auth.api.**
+
+-keep class com.google.android.gms.common.api.** { *; }
+-dontwarn com.google.android.gms.common.api.**
+
+-keep class com.google.android.libraries.identity.googleid.** { *; }
+-dontwarn com.google.android.libraries.identity.googleid.**
+
+# ----------------------------------------
+# Hilt (Dependency Injection)
+# ----------------------------------------
+
+-keep class dagger.hilt.** { *; }
+-dontwarn dagger.hilt.**
+
+-keep class javax.inject.** { *; }
+-dontwarn javax.inject.**
+
+# Keep generated Hilt components and modules
+-keep class * extends dagger.hilt.internal.GeneratedComponent { *; }
+
+# ----------------------------------------
+# Room
+# ----------------------------------------
+
+-keep class androidx.room.** { *; }
+-dontwarn androidx.room.**
+
+# Keep entities & DAOs
+-keep class * extends androidx.room.RoomDatabase
+-keep class * extends androidx.room.Room
+-keep class * implements androidx.room.Dao
+-keepclassmembers class * {
+    @androidx.room.* <methods>;
+}
+
+# ----------------------------------------
+# Jetpack WorkManager
+# ----------------------------------------
+
+-keep class androidx.work.** { *; }
+-dontwarn androidx.work.**
+
+# ----------------------------------------
+# Jetpack Compose
+# ----------------------------------------
+
+-keep class androidx.compose.** { *; }
+-dontwarn androidx.compose.**
+
+# Compose tooling preview
+-keep class androidx.compose.ui.tooling.** { *; }
+
+# ----------------------------------------
+# Kotlin Serialization
+# ----------------------------------------
+
+-keepattributes Signature, InnerClasses, EnclosingMethod
+-keep class kotlinx.serialization.** { *; }
+-dontwarn kotlinx.serialization.**
+
+# ----------------------------------------
+# Coil (Image loading)
+# ----------------------------------------
+
+-keep class coil.** { *; }
+-dontwarn coil.**
+
+# ----------------------------------------
+# Your Custom Model/Data Classes (Very Important!)
+# ----------------------------------------
+
+-keep class com.innovatewithomer.myshelf.data.model.** { *; }
+-dontwarn com.innovatewithomer.myshelf.data.model.**
+
+-keep class com.innovatewithomer.myshelf.data.local.entity.** { *; }
+-dontwarn com.innovatewithomer.myshelf.data.local.entity.**
